@@ -3,3 +3,7 @@ langchain-openai
 pydantic
 python-dotenv
 PyPDF2
+matplotlib
+graphviz
+networkx
+langchain

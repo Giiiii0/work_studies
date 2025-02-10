@@ -1,4 +1,13 @@
 venv/
 .git/
 .env
-*.pdf
+
+# images
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+
+# others
+step_by_step_summary_flowchart

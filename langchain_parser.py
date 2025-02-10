@@ -1,35 +1,39 @@
 import os
+import asyncio
+import textwrap
+import PyPDF2
 from dotenv import load_dotenv
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
-import PyPDF2
-import asyncio
-import textwrap
 from langchain_core.documents.base import Document
 from tenacity import retry, stop_after_attempt, wait_exponential
+import re
 
+# Load environment variables
 load_dotenv()
-
 api_key = os.getenv("OPENAI_API_KEY")
 
-MAX_TOKENS = 128000
-MAX_DEPTH = 3
-AGENT_ROLE = "You're an expert compliance officer, risk manager, auditor and legal advisor"
+# Constants for summarization
+AGENT_ROLE = "You're an expert compliance officer, risk manager, auditor, and legal advisor"
 DEFAULT_BULLET_SUMMARY = textwrap.dedent("""
-    Summarize the key points of the document in 3 to 4 bullets, be concise and focus on specific details.
-    Only summarize the relevant information to the question otherwise ignore it.
-    If there is no relevant information, return "No relevant information found."
+    Summarize the key points of the document in **3 to 4 bullet points**.
+    - Each bullet point should be **clear and concise**.
+    - **Do NOT return a single-block summary**.
+    - Format the response as **Step 1:, Step 2:, Step 3: etc.**.
+    - If no relevant information is found, return **'No relevant information found.'**
 """)
 
-class Summary(BaseModel):
-    summary: str = Field(description="Summary of the document")
+# Define Structured Bullet-Point Output Model
+class BulletPointSummary(BaseModel):
+    bullets: list[str] = Field(description="A structured bullet-point summary of the document.")
 
+# Summarizer Class
 class Summarizer:
     def __init__(self, file_type):
         self.file_type = file_type
-        self.summary_parser = PydanticOutputParser(pydantic_object=Summary)
+        self.summary_parser = PydanticOutputParser(pydantic_object=BulletPointSummary)
 
     def get_base_llm(self, streaming: bool = False):
         return ChatOpenAI(model="gpt-3.5-turbo", temperature=0, streaming=streaming, api_key=api_key)
@@ -39,7 +43,7 @@ class Summarizer:
         return "\n\n" + "\n\n".join(formatted)
 
     @retry(wait=wait_exponential(multiplier=1, min=1, max=5), stop=stop_after_attempt(3))
-    async def base_summarize(self, docs: list[Document], question: str) -> Summary:
+    async def base_summarize(self, docs: list[Document], question: str) -> BulletPointSummary:
         prompt_template = ChatPromptTemplate.from_messages([
             ("system", AGENT_ROLE),
             ("human", "{chain_input}"),
@@ -48,7 +52,6 @@ class Summarizer:
         chain = prompt_template | llm | self.summary_parser
         chain_input = textwrap.dedent(f"""
             Question: {question}
-            Please ensure accuracy and brevity with your answers.
             {DEFAULT_BULLET_SUMMARY}
 
             {self.summary_parser.get_format_instructions()}
@@ -69,21 +72,30 @@ def extract_text_from_pdf(pdf_path):
     return text
 
 # Path to the PDF file
-document_path = 'PolicyTemplate.pdf'
+pdf_path = "policy_template.pdf"
 
-# Initialize the summarizer for PDF files
-summarizer = Summarizer(file_type='PDF')
+# Initialize summarizer
+summarizer = Summarizer(file_type="PDF")
 
 # Extract text from the PDF
-document_text = extract_text_from_pdf(document_path)
+document_text = extract_text_from_pdf(pdf_path)
 
-# Convert extracted text into Document objects (assuming a simple split for demonstration)
-documents = [Document(page_content=page, metadata={"ChunkID": idx, "ContentID": None}) for idx, page in enumerate(document_text.split('\n\n'))]
+# Convert extracted text into Document objects
+documents = [Document(page_content=page, metadata={"ChunkID": idx, "ContentID": None}) for idx, page in enumerate(document_text.split("\n\n"))]
 
-# Run the summarization
+# Run summarization and verify output format
 async def run_summarization():
     summary = await summarizer.base_summarize(documents, question="Summarize the document")
-    print("Summary:", summary)
+
+    # If the response is still in block format, attempt to split it into bullet points
+    if len(summary.bullets) == 1 and not summary.bullets[0].startswith("Step"):
+        print("⚠️ WARNING: LLM output is not formatted correctly. Attempting to extract manually.")
+        extracted_bullets = re.findall(r"Step \d+:.*?(?=Step \d+:|$)", summary.bullets[0], re.DOTALL)
+        summary.bullets = [s.strip() for s in extracted_bullets] if extracted_bullets else summary.bullets
+
+    print("\n✅ **Bullet Point Summary:**\n")
+    for idx, bullet in enumerate(summary.bullets, start=1):
+        print(f"{idx}. {bullet}")
 
 # Execute the summarization
 asyncio.run(run_summarization())
