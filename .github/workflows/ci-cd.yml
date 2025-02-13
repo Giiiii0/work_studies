@@ -17,7 +17,7 @@ on:
         description: 'Path to the Terraform folder'
         required: true
         default: 'terraform-code'
-
+        
 jobs:
   test-and-plan:
     if: github.event_name == 'pull_request'
