@@ -7,6 +7,16 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      test_path:
+        description: 'Path to the test folder'
+        required: true
+        default: 'python-code/tests'
+      terraform_path:
+        description: 'Path to the Terraform folder'
+        required: true
+        default: 'terraform-code'
 
 jobs:
   test-and-plan:
