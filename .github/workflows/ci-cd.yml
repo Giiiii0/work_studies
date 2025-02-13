@@ -2,19 +2,15 @@ name: Test and Terraform Plan
 
 on:
   pull_request:
-  workflow_dispatch:
-    inputs:
-      test_path:
-        description: 'Path to the test folder'
-        required: true
-        default: 'python-code/tests'
-      terraform_path:
-        description: 'Path to the Terraform folder'
-        required: true
-        default: 'terraform-code'
+    branches:
+      - main
+  push:
+    branches:
+      - main
 
 jobs:
   test-and-plan:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repository
@@ -62,12 +58,6 @@ jobs:
     # Initialize Terraform
     - name: Terraform Init
       run: |
-        cd terraform-code
-        terraform init
-
-    # Initialize Terraform
-    - name: Terraform Init
-      run: |
         cd ${{ inputs.terraform_path }}
         terraform init
 
@@ -99,3 +89,38 @@ jobs:
             repo: context.repo.repo,
             body: `### Terraform Plan Output\n\`\`\`json\n${plan}\n\`\`\``
           });
+
+
+    # ✅ Stage 2: Deploy on Merge to Main
+    deploy:
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      needs: test-and-plan  # Ensure PR checks passed before applying
+      runs-on: ubuntu-latest
+      steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Set up Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.10.5'
+
+      # Configure AWS Credentials
+      - name: Configure AWS Credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
+
+      # Initialize Terraform
+      - name: Terraform Init
+        run: |
+          cd ${{ inputs.terraform_path }}
+          terraform init
+
+      # ✅ Apply Terraform Changes Only if PR Passed
+      - name: Terraform Apply
+        run: |
+          cd ${{ inputs.terraform_path }}
+          terraform apply
