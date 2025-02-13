@@ -11,3 +11,9 @@ venv/
 
 # others
 step_by_step_summary_flowchart
+
+# terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
