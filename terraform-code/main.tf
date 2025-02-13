@@ -5,7 +5,7 @@ provider "aws" {
 # ✅ SSH Key Pair for EC2
 resource "aws_key_pair" "my_key" {
   key_name   = "my-terraform-key"
-  public_key = file("~/.ssh/my-terraform-key.pub")  # Update with actual key path
+  public_key = file("${path.module}/my-terraform-key.pub")
 }
 
 # ✅ VPC (Virtual Private Cloud)

@@ -47,6 +47,17 @@ jobs:
       with:
         terraform_version: '1.10.5'
 
+    # Generate SSH key pair for Terraform
+    - name: Generate SSH Key
+      run: |
+        ssh-keygen -t rsa -b 4096 -f terraform-code/my-terraform-key -N ""
+
+    # Initialize Terraform
+    - name: Terraform Init
+      run: |
+        cd terraform-code
+        terraform init
+
     # Initialize Terraform
     - name: Terraform Init
       run: |
