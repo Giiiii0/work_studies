@@ -80,12 +80,19 @@ jobs:
 
     # Add Terraform Plan output to PR
     - name: Comment Terraform Plan on PR
+      if: github.event_name == 'pull_request'
       uses: actions/github-script@v6
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs');
           const plan = fs.readFileSync('${{ inputs.terraform_path }}/plan.json', 'utf8');
+
+          if (!context.payload.pull_request) {
+            console.log("Skipping PR comment - not a pull request event.");
+            return;
+          }
+
           github.rest.issues.createComment({
             issue_number: context.payload.pull_request.number,
             owner: context.repo.owner,
