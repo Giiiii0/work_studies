@@ -17,14 +17,18 @@ on:
         description: 'Path to the Terraform folder'
         required: true
         default: 'terraform-code'
-        
+
 jobs:
   test-and-plan:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+
+    # ✅ Define Terraform Path Once (For Reusability)
+    - name: Set Terraform Path
+      run: echo "TERRAFORM_DIR=${{ inputs.terraform_path || 'terraform-code' }}" >> $GITHUB_ENV
 
     # Set up Python
     - name: Set up Python
@@ -45,7 +49,7 @@ jobs:
 
     # Run pytest
     - name: Run Python Tests
-      run: pytest ${{ inputs.test_path }}
+      run: pytest ${{ inputs.test_path || 'python-code/tests' }}
 
     # Set up Terraform
     - name: Setup Terraform
@@ -63,19 +67,22 @@ jobs:
     # Generate SSH key pair for Terraform
     - name: Generate SSH Key
       run: |
-        ssh-keygen -t rsa -b 4096 -f terraform-code/my-terraform-key -N ""
+        ssh-keygen -t rsa -b 4096 -f $TERRAFORM_DIR/my-terraform-key -N ""
 
     # Initialize Terraform
     - name: Terraform Init
       run: |
-        cd ${{ inputs.terraform_path }}
+        cd $TERRAFORM_DIR
         terraform init
 
     # Run Terraform Plan and output to PR
     - name: Terraform Plan
       run: |
-        cd ${{ inputs.terraform_path }}
-        terraform plan -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" -var="aws_region=${{ secrets.AWS_REGION }}" -out=tfplan
+        cd $TERRAFORM_DIR
+        terraform plan -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+                       -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+                       -var="aws_region=${{ secrets.AWS_REGION }}" \
+                       -out=tfplan
         terraform show -json tfplan > plan.json
 
     # Add Terraform Plan output to PR
@@ -86,7 +93,7 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs');
-          const plan = fs.readFileSync('${{ inputs.terraform_path }}/plan.json', 'utf8');
+          const plan = fs.readFileSync(process.env.TERRAFORM_DIR + '/plan.json', 'utf8');
 
           if (!context.payload.pull_request) {
             console.log("Skipping PR comment - not a pull request event.");
@@ -110,6 +117,10 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
+    # ✅ Reuse Terraform Path
+    - name: Set Terraform Path
+      run: echo "TERRAFORM_DIR=${{ inputs.terraform_path || 'terraform-code' }}" >> $GITHUB_ENV
+
     # Set up Terraform
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
@@ -126,11 +137,11 @@ jobs:
     # Initialize Terraform
     - name: Terraform Init
       run: |
-        cd ${{ inputs.terraform_path }}
+        cd $TERRAFORM_DIR
         terraform init
 
     # ✅ Apply Terraform Changes Only if PR Passed
     - name: Terraform Apply
       run: |
-        cd ${{ inputs.terraform_path }}
-        terraform apply
+        cd $TERRAFORM_DIR
+        terraform apply -auto-approve
