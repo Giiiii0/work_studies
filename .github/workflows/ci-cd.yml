@@ -46,6 +46,13 @@ jobs:
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: '1.10.5'
+    
+    # ✅ Configure AWS Credentials
+    - name: Configure AWS Credentials
+      run: |
+        echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+        echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+        echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
 
     # Generate SSH key pair for Terraform
     - name: Generate SSH Key
@@ -68,7 +75,7 @@ jobs:
     - name: Terraform Plan
       run: |
         cd ${{ inputs.terraform_path }}
-        terraform plan -out=tfplan
+        terraform plan -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" -var="aws_region=${{ secrets.AWS_REGION }}" -out=tfplan
         terraform show -json tfplan > plan.json
 
     # Add Terraform Plan output to PR
