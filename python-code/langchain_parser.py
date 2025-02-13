@@ -1,7 +1,8 @@
 import os
+import re
 import asyncio
 import textwrap
-import PyPDF2
+import pypdf
 from dotenv import load_dotenv
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -9,7 +10,6 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 from langchain_core.documents.base import Document
 from tenacity import retry, stop_after_attempt, wait_exponential
-import re
 
 # Load environment variables
 load_dotenv()
@@ -65,14 +65,14 @@ class Summarizer:
 # Function to extract text from a PDF file
 def extract_text_from_pdf(pdf_path):
     with open(pdf_path, 'rb') as file:
-        reader = PyPDF2.PdfReader(file)
+        reader = pypdf.PdfReader(file)
         text = ''
         for page in reader.pages:
             text += page.extract_text() + '\n'
     return text
 
 # Path to the PDF file
-pdf_path = "policy_template.pdf"
+pdf_path = os.path.join(os.path.dirname(__file__), "policy_template.pdf")
 
 # Initialize summarizer
 summarizer = Summarizer(file_type="PDF")

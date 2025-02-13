@@ -2,8 +2,11 @@ langchain-core
 langchain-openai
 pydantic
 python-dotenv
-PyPDF2
+pypdf
 matplotlib
 graphviz
 networkx
 langchain
+pytest
+reportlab
+pytest-asyncio
