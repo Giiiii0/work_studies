@@ -1,10 +1,7 @@
-name: Test and Terraform Plan
+name: CI Check
 
 on:
   pull_request:
-    branches:
-      - main
-  push:
     branches:
       - main
   workflow_dispatch:
@@ -26,12 +23,11 @@ env:
 
 jobs:
   test-and-plan:
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
-      pull-requests: write  # ✅ Allows commenting on PR
+      pull-requests: write
       issues: write
       statuses: write
 
@@ -43,9 +39,6 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.x'
-
-    - name: Set OpenAI API Key
-      run: echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> $GITHUB_ENV
 
     - name: Install dependencies
       run: |
@@ -71,33 +64,11 @@ jobs:
             body: "⚠️ Python tests failed! Please check the logs and fix the issues before merging."
           });
 
-  deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: test-and-plan
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: '1.10.5'
-
-    - name: Generate SSH Key
-      run: |
-        ssh-keygen -t rsa -b 4096 -f $TERRAFORM_DIR/my-terraform-key -N ""
-
-    - name: Terraform Init
-      run: |
-        cd $TERRAFORM_DIR
-        terraform init
-
     - name: Terraform Plan
       id: terraform_plan
       run: |
         cd $TERRAFORM_DIR
+        terraform init
         terraform plan -var="aws_access_key=${{ env.AWS_ACCESS_KEY_ID }}" \
                        -var="aws_secret_key=${{ env.AWS_SECRET_ACCESS_KEY }}" \
                        -var="aws_region=${{ env.AWS_REGION }}" \
@@ -116,10 +87,3 @@ jobs:
             issue_number: context.payload.pull_request.number,
             body: "⚠️ Terraform plan failed! Please check the logs and fix the issues before merging."
           });
-
-    - name: Terraform Apply
-      run: |
-        cd $TERRAFORM_DIR
-        terraform apply -auto-approve -var="aws_access_key=${{ env.AWS_ACCESS_KEY_ID }}" \
-                        -var="aws_secret_key=${{ env.AWS_SECRET_ACCESS_KEY }}" \
-                        -var="aws_region=${{ env.AWS_REGION }}"
