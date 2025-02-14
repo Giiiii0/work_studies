@@ -123,4 +123,4 @@ jobs:
     - name: Terraform Apply
       run: |
         cd $TERRAFORM_DIR
-        terraform apply -auto-approve
+        terraform apply -auto-approve -input=false
