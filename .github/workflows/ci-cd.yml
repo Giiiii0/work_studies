@@ -64,6 +64,11 @@ jobs:
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
           echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
 
+      # Generate SSH key pair for Terraform
+      - name: Generate SSH Key
+        run: |
+          ssh-keygen -t rsa -b 4096 -f $TERRAFORM_DIR/my-terraform-key -N ""
+
       # ✅ Terraform Init
       - name: Terraform Init
         run: |
