@@ -57,6 +57,7 @@ jobs:
         ssh-keygen -t rsa -b 4096 -f $TERRAFORM_DIR/my-terraform-key -N ""
 
     - name: Terraform Apply
+      id: terraform_apply
       run: |
         cd $TERRAFORM_DIR
         terraform apply -auto-approve -var="aws_access_key=${{ env.AWS_ACCESS_KEY_ID }}" \
@@ -70,7 +71,14 @@ jobs:
         echo "DNS_NAME=$DNS_NAME" >> $GITHUB_ENV
         echo "Load Balancer DNS: $DNS_NAME"
 
-    - name: Comment Load Balancer DNS on PR
+    - name: Test Load Balancer
+      id: test_lb
+      run: |
+        RESPONSE=$(curl -s http://${{ env.DNS_NAME }} ; echo)
+        echo "RESPONSE=$RESPONSE" >> $GITHUB_ENV
+        echo "Load Balancer Response: $RESPONSE"
+
+    - name: Comment Load Balancer Info on PR
       uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -79,12 +87,8 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: context.payload.pull_request.number,
-            body: `✅ Load Balancer DNS: ${{ env.DNS_NAME }}`
+            body: `✅ Load Balancer DNS: ${{ env.DNS_NAME }}\n\n🔍 Load Balancer Response:\n\n\`${{ env.RESPONSE }}\``
           });
-
-    - name: Test Load Balancer
-      run: |
-        curl http://${{ env.DNS_NAME }} ; echo
 
     - name: Destroy Infrastructure
       if: github.event_name == 'workflow_dispatch' && github.event.inputs.destroy == 'true'
