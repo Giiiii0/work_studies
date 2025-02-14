@@ -98,7 +98,14 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs');
-          const plan = fs.readFileSync(process.env.TERRAFORM_DIR + '/plan.json', 'utf8');
+
+          // Read the Terraform Plan output
+          const planPath = process.env.TERRAFORM_DIR + '/plan.json';
+          let plan = fs.readFileSync(planPath, 'utf8');
+
+          // Mask sensitive values
+          plan = plan.replace(/"aws_access_key":\{"value":"(.*?)"\}/g, '"aws_access_key":{"value":"***MASKED***"}');
+          plan = plan.replace(/"aws_secret_key":\{"value":"(.*?)"\}/g, '"aws_secret_key":{"value":"***MASKED***"}');
 
           if (!context.payload.pull_request) {
             console.log("Skipping PR comment - not a pull request event.");
