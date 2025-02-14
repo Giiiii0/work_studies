@@ -98,9 +98,9 @@ jobs:
       id: terraform_plan
       run: |
         cd $TERRAFORM_DIR
-        terraform plan -var="aws_access_key=$AWS_ACCESS_KEY_ID" \
-                       -var="aws_secret_key=$AWS_SECRET_ACCESS_KEY" \
-                       -var="aws_region=$AWS_REGION" \
+        terraform plan -var="aws_access_key=${{ env.AWS_ACCESS_KEY_ID }}" \
+                       -var="aws_secret_key=${{ env.AWS_SECRET_ACCESS_KEY }}" \
+                       -var="aws_region=${{ env.AWS_REGION }}" \
                        -out=tfplan
       continue-on-error: true
 
@@ -120,4 +120,6 @@ jobs:
     - name: Terraform Apply
       run: |
         cd $TERRAFORM_DIR
-        terraform apply
+        terraform apply -auto-approve -var="aws_access_key=${{ env.AWS_ACCESS_KEY_ID }}" \
+                        -var="aws_secret_key=${{ env.AWS_SECRET_ACCESS_KEY }}" \
+                        -var="aws_region=${{ env.AWS_REGION }}"
