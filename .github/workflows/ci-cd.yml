@@ -20,6 +20,9 @@ on:
 
 env:
   TERRAFORM_DIR: ${{ inputs.terraform_path || 'terraform-code' }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
   test-and-plan:
@@ -82,12 +85,6 @@ jobs:
       with:
         terraform_version: '1.10.5'
 
-    - name: Configure AWS Credentials
-      run: |
-        echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-        echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
-        echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
-
     - name: Generate SSH Key
       run: |
         ssh-keygen -t rsa -b 4096 -f $TERRAFORM_DIR/my-terraform-key -N ""
@@ -101,9 +98,9 @@ jobs:
       id: terraform_plan
       run: |
         cd $TERRAFORM_DIR
-        terraform plan -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
-                       -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-                       -var="aws_region=${{ secrets.AWS_REGION }}" \
+        terraform plan -var="aws_access_key=$AWS_ACCESS_KEY_ID" \
+                       -var="aws_secret_key=$AWS_SECRET_ACCESS_KEY" \
+                       -var="aws_region=$AWS_REGION" \
                        -out=tfplan
       continue-on-error: true
 
@@ -120,7 +117,7 @@ jobs:
             body: "⚠️ Terraform plan failed! Please check the logs and fix the issues before merging."
           });
 
-    - name: Terraform Apply 
+    - name: Terraform Apply
       run: |
         cd $TERRAFORM_DIR
-        terraform apply -auto-approve -input=false
+        terraform apply -auto-approve
