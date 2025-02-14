@@ -120,7 +120,7 @@ jobs:
             body: "⚠️ Terraform plan failed! Please check the logs and fix the issues before merging."
           });
 
-    - name: Terraform Apply
+    - name: Terraform Apply 
       run: |
         cd $TERRAFORM_DIR
         terraform apply -auto-approve
