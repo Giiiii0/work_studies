@@ -1,82 +1,53 @@
-name: CI Check
+name: Deploy
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-  workflow_dispatch:
-    inputs:
-      test_path:
-        description: 'Path to the test folder'
-        required: true
-        default: 'python-code/tests'
-      terraform_path:
-        description: 'Path to the Terraform folder'
-        required: true
-        default: 'terraform-code'
+  workflow_dispatch:  # Allows manual triggering
 
 env:
-  TERRAFORM_DIR: ${{ inputs.terraform_path || 'terraform-code' }}
+  TERRAFORM_DIR: 'terraform-code'
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
-  test-and-plan:
+  deploy:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
-      statuses: write
 
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
       with:
-        python-version: '3.x'
+        terraform_version: '1.10.5'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-asyncio
-
-    - name: Run Python Tests
-      id: run_tests
-      run: pytest ${{ inputs.test_path || 'python-code/tests' }}
-      continue-on-error: true
-
-    - name: Comment on PR if tests fail
-      if: failure()
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.payload.pull_request.number,
-            body: "⚠️ Python tests failed! Please check the logs and fix the issues before merging."
-          });
-
-    - name: Terraform Plan
-      id: terraform_plan
+    - name: Terraform Init
       run: |
         cd $TERRAFORM_DIR
         terraform init
-        terraform plan -var="aws_access_key=${{ env.AWS_ACCESS_KEY_ID }}" \
-                       -var="aws_secret_key=${{ env.AWS_SECRET_ACCESS_KEY }}" \
-                       -var="aws_region=${{ env.AWS_REGION }}" \
-                       -out=tfplan
+
+    - name: Terraform Apply
+      id: terraform_apply
+      run: |
+        cd $TERRAFORM_DIR
+        terraform apply -auto-approve -var="aws_access_key=${{ env.AWS_ACCESS_KEY_ID }}" \
+                        -var="aws_secret_key=${{ env.AWS_SECRET_ACCESS_KEY }}" \
+                        -var="aws_region=${{ env.AWS_REGION }}"
       continue-on-error: true
 
-    - name: Comment on PR if Terraform plan fails
-      if: failure()
+    - name: Get Load Balancer DNS
+      id: get_lb_dns
+      run: |
+        DNS_NAME=$(aws elbv2 describe-load-balancers --query "LoadBalancers[*].DNSName" --output text)
+        echo "DNS_NAME=$DNS_NAME" >> $GITHUB_ENV
+        echo "Load Balancer DNS: $DNS_NAME"
+
+    - name: Comment Deployment Info on PR
+      if: github.event_name == 'pull_request'
       uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -85,5 +56,5 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: context.payload.pull_request.number,
-            body: "⚠️ Terraform plan failed! Please check the logs and fix the issues before merging."
+            body: `✅ Load Balancer DNS: ${{ env.DNS_NAME }}`
           });
