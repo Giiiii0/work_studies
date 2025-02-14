@@ -130,37 +130,37 @@ jobs:
       uses: actions/checkout@v4
 
     # ✅ Reuse Terraform Path
-    - name: Set Terraform Path
-      run: echo "TERRAFORM_DIR=${{ inputs.terraform_path || 'terraform-code' }}" >> $GITHUB_ENV
+    # - name: Set Terraform Path
+    #   run: echo "TERRAFORM_DIR=${{ inputs.terraform_path || 'terraform-code' }}" >> $GITHUB_ENV
 
-    # Set up Terraform
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: '1.10.5'
+    # # Set up Terraform
+    # - name: Setup Terraform
+    #   uses: hashicorp/setup-terraform@v3
+    #   with:
+    #     terraform_version: '1.10.5'
 
-    # Configure AWS Credentials
-    - name: Configure AWS Credentials
-      run: |
-        echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-        echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
-        echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
+    # # Configure AWS Credentials
+    # - name: Configure AWS Credentials
+    #   run: |
+    #     echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+    #     echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+    #     echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
 
-    # Initialize Terraform
-    - name: Terraform Init
-      run: |
-        cd $TERRAFORM_DIR
-        terraform init
+    # # Initialize Terraform
+    # - name: Terraform Init
+    #   run: |
+    #     cd $TERRAFORM_DIR
+    #     terraform init
 
-    # Run Terraform Plan and output to PR
-    - name: Terraform Plan
-      run: |
-        cd $TERRAFORM_DIR
-        terraform plan -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
-                       -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-                       -var="aws_region=${{ secrets.AWS_REGION }}" \
-                       -out=tfplan
-        terraform show -json tfplan > plan.json
+    # # Run Terraform Plan and output to PR
+    # - name: Terraform Plan
+    #   run: |
+    #     cd $TERRAFORM_DIR
+    #     terraform plan -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+    #                    -var="aws_secret_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+    #                    -var="aws_region=${{ secrets.AWS_REGION }}" \
+    #                    -out=tfplan
+    #     terraform show -json tfplan > plan.json
 
     # ✅ Apply Terraform Changes Only if PR Passed
     - name: Terraform Apply
