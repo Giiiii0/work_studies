@@ -52,6 +52,10 @@ jobs:
             body: "⚠️ Terraform plan failed! Please check the logs and fix the issues before merging."
           });
 
+    - name: Generate SSH Key
+      run: |
+        ssh-keygen -t rsa -b 4096 -f $TERRAFORM_DIR/my-terraform-key -N ""
+
     - name: Terraform Apply
       run: |
         cd $TERRAFORM_DIR
