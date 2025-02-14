@@ -7,6 +7,9 @@ on:
   push:
     branches:
       - main
+  pull_request_target:
+    types:
+      - closed
   workflow_dispatch:
     inputs:
       test_path:
@@ -122,7 +125,7 @@ jobs:
 
   # ✅ Stage 2: Deploy on Merge to Main
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
     needs: test-and-plan  # Ensure PR checks passed before applying
     runs-on: ubuntu-latest
     steps:
