@@ -33,7 +33,7 @@ jobs:
 
     # ✅ Define Terraform Path Once (For Reusability)
     - name: Set Terraform Path
-      run: echo "TERRAFORM_DIR=${{ inputs.terraform_path || 'terraform-code' }}" >> $GITHUB_ENV
+      run: echo "TERRAFORM_DIR=terraform-code" >> $GITHUB_ENV
 
     # Set up Python
     - name: Set up Python
@@ -131,7 +131,7 @@ jobs:
 
     # ✅ Reuse Terraform Path
     - name: Set Terraform Path
-      run: echo "TERRAFORM_DIR=${{ inputs.terraform_path || 'terraform-code' }}" >> $GITHUB_ENV
+      run: echo "TERRAFORM_DIR=terraform-code" >> $GITHUB_ENV
 
     # Set up Terraform
     - name: Setup Terraform
