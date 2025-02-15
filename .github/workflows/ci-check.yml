@@ -48,11 +48,12 @@ jobs:
 
     - name: Run Python Tests
       id: run_tests
-      run: pytest ${{ inputs.test_path || 'python-code/tests' }}
+      run: |
+        pytest ${{ inputs.test_path || 'python-code/tests' }} || echo "TEST_FAILED=true" >> $GITHUB_ENV
       continue-on-error: true
-
+  
     - name: Comment on PR if tests fail
-      if: failure()
+      if: env.TEST_FAILED == 'true'
       uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
