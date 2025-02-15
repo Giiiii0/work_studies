@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:  # Allows manual triggering
+  workflow_dispatch:
 
 env:
   TERRAFORM_DIR: 'terraform-code'
@@ -31,30 +31,8 @@ jobs:
         terraform init
 
     - name: Terraform Apply
-      id: terraform_apply
       run: |
         cd $TERRAFORM_DIR
         terraform apply -auto-approve -var="aws_access_key=${{ env.AWS_ACCESS_KEY_ID }}" \
                         -var="aws_secret_key=${{ env.AWS_SECRET_ACCESS_KEY }}" \
                         -var="aws_region=${{ env.AWS_REGION }}"
-      continue-on-error: true
-
-    - name: Get Load Balancer DNS
-      id: get_lb_dns
-      run: |
-        DNS_NAME=$(aws elbv2 describe-load-balancers --query "LoadBalancers[*].DNSName" --output text)
-        echo "DNS_NAME=$DNS_NAME" >> $GITHUB_ENV
-        echo "Load Balancer DNS: $DNS_NAME"
-
-    - name: Comment Deployment Info on PR
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.payload.pull_request.number,
-            body: `✅ Load Balancer DNS: ${{ env.DNS_NAME }}`
-          });
