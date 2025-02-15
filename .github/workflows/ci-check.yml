@@ -20,6 +20,7 @@ env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_REGION: ${{ secrets.AWS_REGION }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
 jobs:
   test-and-plan:
@@ -46,13 +47,22 @@ jobs:
         pip install -r requirements.txt
         pip install pytest pytest-asyncio
 
+    - name: Set OpenAI API Key
+      run: echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> $GITHUB_ENV
+
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: '1.10.5'
+
     - name: Run Python Tests
       id: run_tests
-      run: pytest ${{ inputs.test_path || 'python-code/tests' }}
+      run: |
+        pytest ${{ inputs.test_path || 'python-code/tests' }} || echo "TEST_FAILED=true" >> $GITHUB_ENV
       continue-on-error: true
-
+  
     - name: Comment on PR if tests fail
-      if: failure()
+      if: env.TEST_FAILED == 'true'
       uses: actions/github-script@v7
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -64,27 +74,6 @@ jobs:
             body: "⚠️ Python tests failed! Please check the logs and fix the issues before merging."
           });
 
-    - name: Terraform Plan
-      id: terraform_plan
-      run: |
-        cd $TERRAFORM_DIR
-        terraform init
-        terraform plan -var="aws_access_key=${{ env.AWS_ACCESS_KEY_ID }}" \
-                       -var="aws_secret_key=${{ env.AWS_SECRET_ACCESS_KEY }}" \
-                       -var="aws_region=${{ env.AWS_REGION }}" \
-                       -out=tfplan
-      continue-on-error: true
-
-    - name: Comment on PR if Terraform plan fails
-      if: failure()
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: context.payload.pull_request.number,
-            body: "⚠️ Terraform plan failed! Please check the logs and fix the issues before merging."
-          });
-          
+    - name: Fail the workflow if tests failed
+      if: env.TEST_FAILED == 'true'
+      run: exit 1
