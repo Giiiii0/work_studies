@@ -77,3 +77,4 @@ jobs:
     - name: Fail the workflow if tests failed
       if: env.TEST_FAILED == 'true'
       run: exit 1
+
