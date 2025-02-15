@@ -36,7 +36,10 @@ jobs:
     - name: Terraform Init
       run: |
         cd $TERRAFORM_DIR
-        terraform init
+        terraform init -backend-config="bucket=your-terraform-state-bucket" \
+                      -backend-config="key=terraform.tfstate" \
+                      -backend-config="region=us-east-1" \
+                      -backend-config="dynamodb_table=terraform-lock-table"
 
     - name: Terraform Apply
       run: |
