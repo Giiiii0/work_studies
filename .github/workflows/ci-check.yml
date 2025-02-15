@@ -65,6 +65,10 @@ jobs:
             body: "⚠️ Python tests failed! Please check the logs and fix the issues before merging."
           });
 
+    - name: Fail the workflow if tests failed
+      if: env.TEST_FAILED == 'true'
+      run: exit 1
+
     - name: Terraform Plan
       id: terraform_plan
       run: |
