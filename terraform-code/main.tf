@@ -1,3 +1,13 @@
+terraform {
+  backend "s3" {
+    bucket         = "terraform-work-studies"  # 🔹 Create an S3 bucket for this
+    key            = "terraform.tfstate"
+    region         = "us-east-1"  # 🔹 Change to your region
+    encrypt        = true
+    dynamodb_table = "terraform-lock-table"  # 🔹 Create a DynamoDB table for locking
+  }
+}
+
 provider "aws" {
   region     = var.aws_region
   access_key = var.aws_access_key
