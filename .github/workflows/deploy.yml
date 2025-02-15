@@ -25,6 +25,15 @@ jobs:
       with:
         terraform_version: '1.10.5'
 
+    - name: Generate SSH Key Pair (If Not Exists)
+      run: |
+        if [ ! -f "$TERRAFORM_DIR/my-terraform-key.pub" ]; then
+          ssh-keygen -t rsa -b 4096 -f $TERRAFORM_DIR/my-terraform-key -N ""
+          cp $TERRAFORM_DIR/my-terraform-key.pub $TERRAFORM_DIR/
+        else
+          echo "SSH key already exists. Skipping generation."
+        fi
+
     - name: Terraform Init
       run: |
         cd $TERRAFORM_DIR
